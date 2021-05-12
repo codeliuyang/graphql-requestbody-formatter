@@ -21,3 +21,8 @@ query{
 }
 ```
 
+### how to use?
+
+git pull this repository, then open the ```index.html``` in your chrome
+
+![](https://github.com/codeliuyang/graphql-requestbody-formatter/blob/master/Jietu20210512-132244.jpg)
