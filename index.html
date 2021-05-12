@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+
+<head>
+    <title>GraphQL请求体转换</title>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="./static/css/bootstrap.min.css">
+    <script src="./static/js/fetch.min.js"></script>
+    <script src="./static/js/jquery.min.js"></script>
+    <script src="./static/js/bootstrap.min.js"></script>
+    <style>
+        .main-board {
+            margin: 60px 20% 0px 20%;
+        }
+
+        .space-line {
+            height: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="main-board">
+        <textarea id="console-body" class="form-control" rows="8" placeholder="填入http的请求体"></textarea>
+        <div class="space-line"></div>
+        <button id="magic-button" type="button" class="btn btn-success" onclick="magic_show()">转换</button>
+        <div class="space-line"></div>
+        <textarea id="result-body" class="form-control" rows="15" placeholder="获取GraphQL可用的json格式"></textarea>
+        <div class="space-line"></div>
+        <button id="copy-button" type="button" class="btn btn-info" onclick="copy_result()">复制转换结果</button>
+    </div>
+
+    <script type="text/javascript">
+
+        function remove_two_quota(little_str) {
+            return little_str.replace('"', '').replace('"', '')
+        }
+
+        function firstToSmall(little_str) {
+            first_letter = little_str.charAt(0)
+            left_letter = little_str.substring(1)
+            return first_letter.toLowerCase() + left_letter
+        }
+
+        function find_index(str, cha, num) {
+            var x = str.indexOf(cha);
+            for (var i = 0; i < num; i++) {
+                x = str.indexOf(cha, x + 1);
+            }
+            return x;
+        }
+
+        function new_line_space(num){
+            var rr = ""
+            for(var i=0; i < num*2; i++){
+                rr += " "
+            }
+            return rr;
+        }
+
+        function magic_show() {
+            console.log("show")
+            consoleText = document.getElementById('console-body').value
+            resultBody = ""
+            if (consoleText.includes('mutation')) {
+                console.log('this is mutation')
+                resultBody += "mutation{\n"
+
+                consoleTextJson = JSON.parse(consoleText)
+                console.log(consoleTextJson['variables'])
+                // 获取query的方法名
+                operationName = consoleTextJson['operationName']
+                resultBody += new_line_space(1) + firstToSmall(remove_two_quota(JSON.stringify(operationName)))
+                console.log(resultBody)
+                // 获取query的参数
+                variables = consoleTextJson['variables']
+                resultBody += "(\n" + new_line_space(2)
+
+                var_str = JSON.stringify(variables)
+                var_str = var_str.substring(1, var_str.length - 1)
+                // 先用冒号分隔
+                var_strs = var_str.split(":")
+                var space_num = 2
+                for (var index in var_strs) {
+                    small_str = var_strs[index]
+                    // 去掉key值上多余的冒号
+                    if (index < var_strs.length - 1) {
+                        small_str = small_str.replace(/(.*)\"/, '$1');
+                        small_str = small_str.replace(/(.*)\"/, '$1');
+                    }
+                    // 换行操作，格式更好看一点
+                    if(small_str.includes('{')){
+                        space_num = space_num + 1
+                        small_str = small_str.replace("{", "{\n" + new_line_space(space_num))
+                    }
+                    if(small_str.includes(",")){
+                        small_str = small_str.replace(",", ",\n" + new_line_space(space_num))
+                    }
+                    // 拼接起来加冒号
+                    if (index == 0) {
+                        resultBody += small_str
+                    } else {
+                        resultBody += ": " + small_str
+                    }
+                }
+
+                resultBody += "\n  ){\n"
+                // 返回体结构
+                queryStr = JSON.stringify(consoleTextJson['query'])
+                start_index = find_index(queryStr, "{", 1)
+                queryStr = queryStr.substring(start_index + 3, queryStr.length - 11)
+                queryStr = queryStr.replace(/\\n/g, '\n')
+
+                resultBody += queryStr
+                resultBody += "\n  }"
+
+
+                resultBody += "\n}"
+                document.getElementById("result-body").value = resultBody
+                return ""
+            }
+            if (consoleText.includes('query')) {
+                console.log('this is query')
+                resultBody += "query{\n"
+                consoleTextJson = JSON.parse(consoleText)
+                console.log(consoleTextJson['variables'])
+                // 获取query的方法名
+                operationName = consoleTextJson['operationName']
+                resultBody += "  " + firstToSmall(remove_two_quota(JSON.stringify(operationName)))
+                console.log(resultBody)
+                // 获取query的参数
+                variables = consoleTextJson['variables']
+                resultBody += "("
+                for (var key in variables) {
+                    console.log(key)
+                    value = variables[key]
+                    if (isNaN(value)) {
+                        resultBody += key + ": \"" + variables[key] + "\", "
+                    } else {
+                        resultBody += key + ": " + variables[key] + ", "
+                    }
+                }
+                resultBody = resultBody.substring(0, resultBody.length - 2)
+                resultBody += "){\n"
+                // 返回体结构
+                queryStr = JSON.stringify(consoleTextJson['query'])
+                start_index = find_index(queryStr, "{", 1)
+                queryStr = queryStr.substring(start_index + 3, queryStr.length - 11)
+                queryStr = queryStr.replace(/\\n/g, '\n')
+
+                resultBody += queryStr
+                resultBody += "\n  }"
+                resultBody += "\n}"
+                document.getElementById("result-body").value = resultBody
+                return ""
+            }
+            if (resultBody == "") {
+                alert("格式不正确吧？没有query或者mutation")
+            } else {
+                document.getElementById("result-body").value = resultBody
+            }
+        }
+
+        function copy_result() {
+            const textArea = document.querySelector('#result-body');
+            textArea.select();
+            if (document.execCommand('copy')) {
+                document.execCommand('copy');
+                console.log('复制成功');
+            }
+
+        }
+
+    </script>
+</body>
