@@ -49,9 +49,9 @@
             return x;
         }
 
-        function new_line_space(num){
+        function new_line_space(num) {
             var rr = ""
-            for(var i=0; i < num*2; i++){
+            for (var i = 0; i < num * 2; i++) {
                 rr += " "
             }
             return rr;
@@ -66,6 +66,17 @@
                 resultBody += "mutation{\n"
 
                 consoleTextJson = JSON.parse(consoleText)
+
+                if (!consoleText.includes('operationName')) {
+                    // 不包含operationName 是因为直接用的GraphQL的请求页面，不是React发出的请求
+                    queryStr = JSON.stringify(consoleTextJson['query'])
+                    queryStr = queryStr.replace(/"/g, '')
+                    queryStr = queryStr.replace(/\\n/g, '\n')
+                    queryStr = queryStr.replace(/\\/g, '"')
+                    document.getElementById("result-body").value = queryStr
+                    return ""
+                }
+
                 console.log(consoleTextJson['variables'])
                 // 获取query的方法名
                 operationName = consoleTextJson['operationName']
@@ -88,11 +99,11 @@
                         small_str = small_str.replace(/(.*)\"/, '$1');
                     }
                     // 换行操作，格式更好看一点
-                    if(small_str.includes('{')){
+                    if (small_str.includes('{')) {
                         space_num = space_num + 1
                         small_str = small_str.replace("{", "{\n" + new_line_space(space_num))
                     }
-                    if(small_str.includes(",")){
+                    if (small_str.includes(",")) {
                         small_str = small_str.replace(",", ",\n" + new_line_space(space_num))
                     }
                     // 拼接起来加冒号
@@ -120,27 +131,46 @@
             }
             if (consoleText.includes('query')) {
                 console.log('this is query')
-                resultBody += "query{\n"
                 consoleTextJson = JSON.parse(consoleText)
+                resultBody = ""
+                console.log(consoleTextJson)
                 console.log(consoleTextJson['variables'])
+
+                if (!consoleText.includes('operationName')) {
+                    // 不包含operationName 是因为直接用的GraphQL的请求页面，不是React发出的请求
+                    queryStr = JSON.stringify(consoleTextJson['query'])
+                    queryStr = queryStr.replace(/"/g, '')
+                    queryStr = queryStr.replace(/\\n/g, '\n')
+                    document.getElementById("result-body").value = queryStr
+                    return ""
+                }
+
+                resultBody += "query{\n"
                 // 获取query的方法名
                 operationName = consoleTextJson['operationName']
                 resultBody += "  " + firstToSmall(remove_two_quota(JSON.stringify(operationName)))
                 console.log(resultBody)
                 // 获取query的参数
                 variables = consoleTextJson['variables']
-                resultBody += "("
-                for (var key in variables) {
-                    console.log(key)
-                    value = variables[key]
-                    if (isNaN(value)) {
-                        resultBody += key + ": \"" + variables[key] + "\", "
-                    } else {
-                        resultBody += key + ": " + variables[key] + ", "
+
+                if (Object.keys(variables).length == 0) {
+                    resultBody += "{\n"
+                } else {
+                    resultBody += "("
+                    for (var key in variables) {
+                        console.log(key)
+                        value = variables[key]
+                        if (isNaN(value)) {
+                            resultBody += key + ": \"" + variables[key] + "\", "
+                        } else {
+                            resultBody += key + ": " + variables[key] + ", "
+                        }
                     }
+                    resultBody = resultBody.substring(0, resultBody.length - 2)
+                    resultBody += "){\n"
                 }
-                resultBody = resultBody.substring(0, resultBody.length - 2)
-                resultBody += "){\n"
+
+
                 // 返回体结构
                 queryStr = JSON.stringify(consoleTextJson['query'])
                 start_index = find_index(queryStr, "{", 1)
